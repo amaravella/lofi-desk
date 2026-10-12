@@ -1,0 +1,21 @@
+# personal settings and data
+settings.ini
+notes.json
+launch/*
+!launch/README.md
+art/*
+!art/README.md
+backup/
+cursors-backup.reg
+wallpaper_*.png
+!assets/*.png
+
+# build output and downloaded SDK (build.ps1 recreates them)
+build/
+dist/
+*.exe
+*.scr
+Microsoft.Web.WebView2.*.dll
+WebView2Loader.dll
+scene.en.html
+i18n/strings.json
