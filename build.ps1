@@ -3,9 +3,11 @@
 #   powershell -ExecutionPolicy Bypass -File build.ps1 -Install   -> also copies it to LofiDesk.exe / LofiDesk.scr
 # Needs only what ships with Windows: the .NET Framework 4.x C# compiler. The WebView2 SDK is downloaded once from NuGet.
 #   powershell -ExecutionPolicy Bypass -File build.ps1 -Package   -> also dist\LofiDesk-<version>.zip for GitHub Releases
-param([switch]$Install, [switch]$Package, [string]$Version = '1.0.0')
+param([switch]$Install, [switch]$Package, [string]$Version = '')
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
+# версия одна на всё — та, что в Updater.cs (по ней же проверяются обновления)
+if (-not $Version) { $Version = [regex]::Match((Get-Content Updater.cs -Raw), 'Version = "([\d.]+)"').Groups[1].Value }
 New-Item -ItemType Directory build -Force | Out-Null
 $csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path $csc)) { throw 'C# compiler not found (.NET Framework 4.x is required)' }
@@ -28,14 +30,16 @@ $rt = Get-ChildItem 'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\System.Runtime' 
   /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll "/r:$rt" `
   "/r:$wm\Windows.Media.winmd" "/r:$wm\Windows.Foundation.winmd" "/r:$wm\Windows.Storage.winmd" `
   /r:Microsoft.Web.WebView2.Core.dll /r:Microsoft.Web.WebView2.WinForms.dll `
-  LofiSaver.cs Widgets.cs AppUsage.cs
+  LofiSaver.cs Widgets.cs AppUsage.cs Settings.cs Updater.cs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 3. translations: scene.html is the Russian original, scene.en.html is generated from i18n/en.json
 & $csc /nologo /out:build\i18n.exe /r:System.Web.Extensions.dll tools\i18n.cs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& .\build\i18n.exe apply scene.html i18n\en.json scene.en.html
-if ($LASTEXITCODE -ne 0) { Write-Warning 'some strings have no English translation yet (see above) - run: build\i18n.exe extract scene.html i18n\strings.json' }
+foreach ($page in 'scene', 'settings') {
+    & .\build\i18n.exe apply "$page.html" i18n\en.json "$page.en.html"
+    if ($LASTEXITCODE -ne 0) { Write-Warning "some strings in $page.html have no English translation yet (see above) - run: build\i18n.exe extract $page.html i18n\strings.json" }
+}
 
 # 4. optional: replace the running copy (stops the wallpaper first)
 if ($Install) {
@@ -51,9 +55,9 @@ if ($Package) {
     if (Test-Path build\pkg) { Remove-Item build\pkg -Recurse -Force }
     New-Item -ItemType Directory "$stage\art", "$stage\launch", "$stage\assets", "$stage\i18n" -Force | Out-Null
     Copy-Item build\LofiDesk.new.exe "$stage\LofiDesk.exe"
-    Copy-Item Microsoft.Web.WebView2.Core.dll, Microsoft.Web.WebView2.WinForms.dll, WebView2Loader.dll, scene.html, scene.en.html,
+    Copy-Item Microsoft.Web.WebView2.Core.dll, Microsoft.Web.WebView2.WinForms.dll, WebView2Loader.dll, scene.html, scene.en.html, settings.html, settings.en.html,
               install.ps1, uninstall.ps1, build.ps1, set-wallpapers.ps1, statusline.ps1, settings.example.ini, README.md, README.ru.md, LICENSE,
-              LofiSaver.cs, Widgets.cs, AppUsage.cs $stage
+              LofiSaver.cs, Widgets.cs, AppUsage.cs, Settings.cs, Updater.cs $stage
     Copy-Item art\README.md "$stage\art"; Copy-Item launch\README.md "$stage\launch"; Copy-Item assets\black.png "$stage\assets"
     Copy-Item i18n\en.json "$stage\i18n"; New-Item -ItemType Directory "$stage\tools" -Force | Out-Null; Copy-Item tools\i18n.cs "$stage\tools"
     if (Test-Path build\wv2pkg\LICENSE.txt) { Copy-Item build\wv2pkg\LICENSE.txt "$stage\WebView2-LICENSE.txt" }

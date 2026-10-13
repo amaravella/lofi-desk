@@ -19,3 +19,4 @@ Microsoft.Web.WebView2.*.dll
 WebView2Loader.dll
 scene.en.html
 i18n/strings.json
+settings.en.html

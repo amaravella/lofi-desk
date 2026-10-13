@@ -32,11 +32,13 @@ static class LofiSaver
     {
         string mode = args.Length > 0 ? args[0].ToLowerInvariant().Trim() : "/c";
         if (mode.StartsWith("/p")) return;
-        if (mode.StartsWith("/c"))
+        // /c — «Параметры» заставки в Windows (и /settings вручную): то же окно настроек, что в трее
+        if (mode.StartsWith("/c") || mode.StartsWith("/settings"))
         {
+            try { SetProcessDpiAwarenessContext(new IntPtr(-4)); } catch { }
+            Application.EnableVisualStyles();
             settings = LoadSettings(); Widgets.Configure(settings);
-            MessageBox.Show(Widgets.L("Lofi Desk\n\nOLED — чёрный экран, второй монитор — сцена.\nНастройки: ", "Lofi Desk\n\nPrimary (OLED) monitor goes pure black, the others show the scene.\nSettings: ") + Path.Combine(baseDir, "settings.ini"),
-                "Lofi Desk", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Application.Run(SettingsWindow.Create(RestartRunningWallpaper));
             return;
         }
         bool wallpaper = mode.StartsWith("/w");
@@ -63,15 +65,26 @@ static class LofiSaver
     static Mutex mutex;
     static bool restarting;
 
-    static void Log(Exception ex)
+    static void Log(Exception ex) { Widgets.LogText(Convert.ToString(ex)); }
+
+    // настройки сохранены из отдельного процесса (/c): если живые обои запущены — перезапускаем их
+    static void RestartRunningWallpaper()
     {
-        try
+        bool running = false;
+        int self = System.Diagnostics.Process.GetCurrentProcess().Id;
+        foreach (var p in System.Diagnostics.Process.GetProcessesByName("LofiDesk"))
         {
-            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LofiDesk");
-            Directory.CreateDirectory(dir);
-            File.AppendAllText(Path.Combine(dir, "log.txt"), DateTime.Now.ToString("s") + " " + ex + "\r\n\r\n");
+            if (p.Id == self) continue;
+            try
+            {
+                if (!string.Equals(Path.GetFullPath(p.MainModule.FileName), Path.Combine(baseDir, "LofiDesk.exe"), StringComparison.OrdinalIgnoreCase)) continue;
+                p.Kill(); p.WaitForExit(3000); running = true;
+            }
+            catch (Exception ex) { Log(ex); }
         }
-        catch { }
+        if (!running) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.Combine(baseDir, "LofiDesk.exe"), "/w") { UseShellExecute = false, WorkingDirectory = baseDir }); }
+        catch (Exception ex) { Log(ex); }
     }
 
     // explorer умер/перезапустился и снёс наши окна — запускаем себя заново
@@ -177,6 +190,8 @@ var relayout = new System.Windows.Forms.Timer { Interval = 2000 };
         StartFeed();
         Widgets.Start(Broadcast, settings, baseDir);
         Widgets.Tray(delegate { RestartWallpaper(); });
+        Updater.Changed += delegate { if (Updater.State == "available") Widgets.ShowUpdate(Updater.Latest, false); };
+        Updater.Start(settings["updates"] != "0", delegate (string v, string u) { Widgets.ShowUpdate(v, true); });
         Application.ApplicationExit += delegate { Widgets.HideTray(); };
         Application.Run();
     }
@@ -244,10 +259,10 @@ var relayout = new System.Windows.Forms.Timer { Interval = 2000 };
         };
     }
 
-    static Dictionary<string, string> LoadSettings()
+    internal static Dictionary<string, string> LoadSettings()
     {
         var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        d["scene"] = "lofi"; d["feed"] = "1"; d["art"] = ""; d["lang"] = "en"; d["limits"] = "0";
+        d["scene"] = "lofi"; d["feed"] = "1"; d["art"] = ""; d["lang"] = "en"; d["limits"] = "0"; d["updates"] = "1";
         string p = Path.Combine(baseDir, "settings.ini");
         if (File.Exists(p))
             foreach (var line in File.ReadAllLines(p, Encoding.UTF8))

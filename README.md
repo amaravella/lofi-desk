@@ -65,12 +65,21 @@ shelves. When you step away, your OLED monitor goes pure black.
    ```
    It creates `settings.ini`, starts Lofi Desk with Windows, registers the screensaver and sets a black
    static wallpaper on the primary monitor. Skip parts with `-NoScreensaver` / `-NoBlackWallpaper`.
-3. Edit `settings.ini` (city, language, scene) and choose **Restart wallpaper** in the tray menu.
+3. Right-click the tray icon → **⚙ Settings…**: pick the scene or your own picture, find your city,
+   switch the language — the live preview on the right shows the result — and press **Save and restart**.
+
+   <img src="docs/settings.png" alt="The Settings window" width="720">
+
+Lofi Desk checks GitHub for a new release once a day (it only looks, it never downloads anything); when one
+is out, the tray menu and the mascot tell you. Turn it off in Settings.
 
 The exe is not code-signed, so Windows SmartScreen may warn you the first time; you can always build it
 yourself from source with `build.ps1`.
 
 ## Settings (`settings.ini`)
+
+Everything below is also in the Settings window; the file is for those who prefer a text editor.
+The Windows screensaver dialog's **Settings** button opens the same window.
 
 | key | values | |
 |---|---|---|
@@ -79,6 +88,8 @@ yourself from source with `build.ps1`.
 | `art` | `art/your-picture.jpg` | picture for the art scene (see [art/README.md](art/README.md)) |
 | `feed` | `1`, `0` | Claude Code feed and the mascot |
 | `grain` | `1`, `0` | film grain |
+| `clock` | `1`, `0` | clock and date |
+| `updates` | `1`, `0` | check GitHub for a new version once a day |
 | `city`, `lat`, `lon` | e.g. `Lisbon`, `38.72`, `-9.14` | weather; empty `lat`/`lon` hides the widget |
 | `limits` | `0`, `1` | also read plan limits from the Claude desktop app cache (undocumented, off by default) |
 
@@ -93,7 +104,7 @@ Quick-launch icons come from the [`launch/`](launch/README.md) folder.
 - **Click the house** → look inside; **click furniture** inside → he uses it.
 - **Click a session** in the feed → opens it in the Claude desktop app.
 - **Click just above the floor or a shelf** → he walks or jumps there.
-- **Tray icon** → I'm away / I'm back, restart, settings, quit.
+- **Tray icon** → I'm away / I'm back, settings, restart, quit.
 
 ### Plan limits
 
@@ -130,8 +141,10 @@ WebView2 SDK from NuGet once.
 | `LofiSaver.cs` | host: modes (`/w` wallpaper, `/s` screensaver, `/t` test), desktop layering, mouse, Claude Code feed |
 | `Widgets.cs` | media, audio level, system stats, weather, launch shelves, notes, tray, downloads, internet |
 | `AppUsage.cs` | optional: reads the Claude app's local storage (LevelDB + Snappy) for plan limits |
+| `Settings.cs`, `settings.html` | the Settings window: a WebView2 page with a live preview of the real scene |
+| `Updater.cs` | the version number and the once-a-day GitHub release check |
 | `scene.html` | everything you see: scenes, widgets, the mascot and his house (Russian original) |
-| `i18n/en.json`, `tools/i18n.cs` | translation: the build generates `scene.en.html` from the dictionary |
+| `i18n/en.json`, `tools/i18n.cs` | translation: the build generates `scene.en.html` and `settings.en.html` from the dictionary |
 
 **Translations.** UI strings live in `scene.html` in Russian; `tools/i18n.cs` extracts them
 (`build\i18n.exe extract scene.html i18n\strings.json`) and `build.ps1` writes `scene.en.html` from

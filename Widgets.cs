@@ -58,13 +58,28 @@ static class Widgets
         t.Start();
     }
 
-    static void LogErr(Exception ex)
+    static void LogErr(Exception ex) { LogText("[widgets] " + ex); }
+
+    // общий лог хоста; больше 1 МБ — старый уезжает в log.old.txt
+    static readonly object logGate = new object();
+    public static void LogText(string text)
     {
         try
         {
-            string d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LofiDesk");
-            Directory.CreateDirectory(d);
-            File.AppendAllText(Path.Combine(d, "log.txt"), DateTime.Now.ToString("s") + " [widgets] " + ex + "\r\n\r\n");
+            lock (logGate)
+            {
+                string d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LofiDesk");
+                Directory.CreateDirectory(d);
+                string p = Path.Combine(d, "log.txt");
+                var fi = new FileInfo(p);
+                if (fi.Exists && fi.Length > 1024 * 1024)
+                {
+                    string old = Path.Combine(d, "log.old.txt");
+                    if (File.Exists(old)) File.Delete(old);
+                    File.Move(p, old);
+                }
+                File.AppendAllText(p, DateTime.Now.ToString("s") + " " + text + "\r\n\r\n");
+            }
         }
         catch { }
     }
@@ -105,12 +120,26 @@ static class Widgets
         return op.GetResults();
     }
 
+    // служба медиа Windows иногда перестаёт отвечать (после сна, при зависшем плеере):
+    // переспрашиваем всё реже — 3, 6, 12… до 60 с — и пишем в лог только начало и конец такой серии
     static void MediaLoop()
     {
+        int fails = 0;
         while (true)
         {
-            try { MediaTick(); }
-            catch (Exception ex) { LogErr(ex); mgr = null; Thread.Sleep(3000); }
+            try
+            {
+                MediaTick();
+                if (fails > 1) LogText("[widgets] media: recovered after " + fails + " failed attempts");
+                fails = 0;
+            }
+            catch (Exception ex)
+            {
+                fails++;
+                if (fails == 1) LogErr(ex);
+                mgr = null;
+                Thread.Sleep(Math.Min(60000, 3000 << Math.Min(fails - 1, 5)));
+            }
             Thread.Sleep(1000);
         }
     }
@@ -402,18 +431,45 @@ static class Widgets
         {
             tray = new NotifyIcon { Text = "Lofi Desk", Icon = MascotIcon(), Visible = true };
             var menu = new ContextMenuStrip();
+            // появляется, когда на GitHub вышла новая версия
+            updateItem = new ToolStripMenuItem { Visible = false };
+            updateItem.Font = new Font(updateItem.Font, FontStyle.Bold);
+            updateItem.Click += delegate { OpenUrl(Updater.Url); };
+            menu.Items.Add(updateItem);
             // режим «я ушёл» — тот же, что кнопкой на обоях
             menu.Items.Add(L("🚪 Я ушёл", "🚪 I'm away"), null, delegate { send("{\"type\":\"awaycmd\",\"on\":true}"); });
             menu.Items.Add(L("🏠 Я вернулся", "🏠 I'm back"), null, delegate { send("{\"type\":\"awaycmd\",\"on\":false}"); });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(L("Перезапустить обои", "Restart wallpaper"), null, delegate { restart(); });
             menu.Items.Add(L("Открыть папку Lofi Desk", "Open Lofi Desk folder"), null, delegate { Process.Start(new ProcessStartInfo(baseDir) { UseShellExecute = true }); });
-            menu.Items.Add(L("Настройки (settings.ini)", "Settings (settings.ini)"), null, delegate { Process.Start(new ProcessStartInfo(Path.Combine(baseDir, "settings.ini")) { UseShellExecute = true }); });
+            menu.Items.Add(L("⚙ Настройки…", "⚙ Settings…"), null, delegate { SettingsWindow.Open(restart); });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(L("Выключить живые обои", "Quit live wallpaper"), null, delegate { tray.Visible = false; Application.Exit(); });
             tray.ContextMenuStrip = menu;
         }
         catch (Exception ex) { LogErr(ex); }
+    }
+
+    static ToolStripMenuItem updateItem;
+
+    // вышла новая версия: пункт в трее, всплывашка и пара слов от маскота (один раз на версию)
+    public static void ShowUpdate(string version, bool announce)
+    {
+        if (ui == null) return;
+        ui.Post(delegate
+        {
+            if (updateItem != null) { updateItem.Text = L("⬆ Вышла версия ", "⬆ Version ") + version + L(" — открыть", " is out — open"); updateItem.Visible = true; }
+            if (!announce) return;
+            Notify("Lofi Desk " + version, L("Вышла новая версия — подробности в меню трея.", "A new version is out — see the tray menu."));
+            Say(L("вышла версия ", "version ") + version + L("! 🎉", " is out! 🎉"));
+        }, null);
+    }
+
+    // открываем только страницы своего репозитория
+    public static void OpenUrl(string url)
+    {
+        if (string.IsNullOrEmpty(url) || !url.StartsWith("https://github.com/" + Updater.Repo + "/")) url = Updater.ReleasesUrl;
+        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch (Exception ex) { LogErr(ex); }
     }
 
     public static void Notify(string title, string text)
@@ -425,7 +481,7 @@ static class Widgets
     public static void HideTray() { if (tray != null) { tray.Visible = false; tray.Dispose(); } }
 
     // маленький пиксельный Claude для трея
-    static Icon MascotIcon()
+    internal static Icon MascotIcon()
     {
         var b = new Bitmap(32, 32);
         using (var g = Graphics.FromImage(b))

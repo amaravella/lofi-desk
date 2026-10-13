@@ -324,7 +324,7 @@ function makeLayer() {
 }
 
 function layout() {
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  DPR = +params.get('dpr') || Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   fxCanvas.width = canvas.width; fxCanvas.height = canvas.height;
@@ -3845,7 +3845,7 @@ function drawBubble(dt, headY, r) {
 function runDemo() {
   onMedia({ has: true, title: 'Pearls', artist: 'Sade', album: 'Love Deluxe', app: 'Spotify', playing: true, pos: 150, dur: 245, art: '' });
   renderSys({ cpu: 12, gpu: 7, gpuTemp: 41, ram: 38, ramUsed: 24.1, vram: 15 });
-  onWeather({ city: 'Лиссабон', t: 4.2, feels: 1, code: 61, isDay: 1, hi: 9, lo: 3, tHi: 11, tLo: 2, pp: 70, hours: [{h:'13',t:4,code:61,pp:70},{h:'14',t:5,code:61,pp:60},{h:'15',t:5,code:3,pp:30},{h:'16',t:6,code:3,pp:20},{h:'17',t:5,code:2,pp:10},{h:'18',t:4,code:2,pp:10},{h:'19',t:3,code:0,pp:0},{h:'20',t:3,code:0,pp:0},{h:'21',t:2,code:0,pp:0},{h:'22',t:2,code:0,pp:0},{h:'23',t:1,code:0,pp:0},{h:'00',t:1,code:0,pp:0}] });
+  onWeather({ city: params.get('city') || 'Лиссабон', t: 4.2, feels: 1, code: 61, isDay: 1, hi: 9, lo: 3, tHi: 11, tLo: 2, pp: 70, hours: [{h:'13',t:4,code:61,pp:70},{h:'14',t:5,code:61,pp:60},{h:'15',t:5,code:3,pp:30},{h:'16',t:6,code:3,pp:20},{h:'17',t:5,code:2,pp:10},{h:'18',t:4,code:2,pp:10},{h:'19',t:3,code:0,pp:0},{h:'20',t:3,code:0,pp:0},{h:'21',t:2,code:0,pp:0},{h:'22',t:2,code:0,pp:0},{h:'23',t:1,code:0,pp:0},{h:'00',t:1,code:0,pp:0}] });
   onLaunch({ items: ['Music','Browser','Chat','Notes','Games','Claude'].map(n => ({ name: n, icon: '' })) });
   onNotes({ items: [{ id: '1', text: 'полить монстеру', done: false }, { id: '2', text: 'купить кофе', done: true }, { id: '3', text: 'дописать README', done: false }] });
   // ?mtest=1 — имитация мыши: погладить, потом схватить и поднять

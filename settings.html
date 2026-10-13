@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Lofi Desk — настройки</title>
+<style>
+  :root {
+    --bg: #161012; --panel: rgba(255, 236, 226, 0.035); --panel2: rgba(255, 236, 226, 0.06);
+    --line: rgba(255, 190, 160, 0.13); --text: #f3e6de; --muted: #a8948b; --dim: #76665f;
+    --acc: #e8a87c; --acc2: #c9b6f0; --good: #9fd6a7; --warn: #ff8f80;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(1200px 700px at 85% -10%, rgba(232, 168, 124, 0.10), transparent 60%),
+                radial-gradient(900px 600px at -10% 110%, rgba(201, 182, 240, 0.08), transparent 60%), var(--bg);
+    color: var(--text); font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    overflow: hidden; user-select: none;
+  }
+  .app { display: grid; grid-template-columns: minmax(420px, 520px) 1fr; height: 100%; }
+  .side { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: rgba(0, 0, 0, 0.18); }
+  .scroll { flex: 1; overflow-y: auto; padding: 26px 28px 20px; }
+  .scroll::-webkit-scrollbar { width: 10px; }
+  .scroll::-webkit-scrollbar-thumb { background: rgba(255, 220, 200, 0.12); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  header canvas { width: 44px; height: 33px; image-rendering: pixelated; }
+  header h1 { margin: 0; font: 600 20px/1.1 "Segoe UI Variable Display", "Segoe UI", sans-serif; letter-spacing: .01em; }
+  header .ver { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 16px 14px; margin-bottom: 14px; }
+  section h2 { margin: 0 0 12px; font-size: 11.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--acc); }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { text-align: left; background: var(--panel2); border: 1px solid transparent; border-radius: 12px; padding: 12px; color: var(--text); cursor: pointer; font: inherit; transition: border-color .15s, background .15s; }
+  .card:hover { background: rgba(255, 236, 226, 0.09); }
+  .card.on { border-color: var(--acc); background: rgba(232, 168, 124, 0.10); }
+  .card b { display: block; font-weight: 600; margin: 4px 0 2px; }
+  .card span { color: var(--muted); font-size: 12.5px; }
+  .card .ic { font-size: 20px; }
+
+  .arts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .arts[hidden] { display: none; }
+  .thumb { position: relative; aspect-ratio: 3 / 4; border-radius: 10px; overflow: hidden; border: 2px solid transparent; cursor: pointer; background: var(--panel2); padding: 0; }
+  .thumb { background: linear-gradient(160deg, #3a2a2c, #1a1214); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb.on { border-color: var(--acc); }
+  .thumb .nm { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 4px; font-size: 10.5px; color: #fff; background: linear-gradient(transparent, rgba(0, 0, 0, .7)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+  .thumb.add { background: var(--panel2); display: grid; place-items: center; color: var(--muted); font: inherit; font-size: 12px; border: 1.5px dashed rgba(255, 200, 170, 0.25); }
+  .thumb.add:hover { color: var(--text); border-color: var(--acc); }
+  .thumb.add i { display: block; font-style: normal; font-size: 22px; line-height: 1; margin-bottom: 4px; text-align: center; }
+
+  .row { display: flex; align-items: center; gap: 12px; padding: 9px 0; }
+  .row + .row { border-top: 1px solid rgba(255, 190, 160, 0.07); }
+  .row .lbl { flex: 1; min-width: 0; }
+  .row .lbl small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .sw { position: relative; width: 40px; height: 22px; flex: none; cursor: pointer; }
+  .sw input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .sw i { position: absolute; inset: 0; border-radius: 22px; background: rgba(255, 236, 226, 0.14); transition: background .18s; pointer-events: none; }
+  .sw i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #e9dcd5; transition: transform .18s; }
+  .sw input:checked + i { background: var(--acc); }
+  .sw input:checked + i::after { transform: translateX(18px); background: #2a1a14; }
+  .sw input:focus-visible + i { outline: 2px solid var(--acc2); outline-offset: 2px; }
+
+  .search { display: flex; gap: 8px; margin-top: 4px; }
+  input[type=text] { flex: 1; min-width: 0; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); border-radius: 10px; color: var(--text); font: inherit; padding: 8px 11px; outline: none; user-select: text; }
+  input[type=text]:focus { border-color: var(--acc); }
+  .btn { background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 8px 14px; font: inherit; cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: rgba(255, 236, 226, 0.10); }
+  .btn.primary { background: var(--acc); color: #2a1810; border-color: transparent; font-weight: 600; }
+  .btn.primary:hover { background: #f0b78f; }
+  .btn.small { padding: 5px 10px; font-size: 12.5px; }
+  .place { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; color: var(--text); }
+  .place small { color: var(--muted); font-family: "Cascadia Mono", Consolas, monospace; font-size: 11.5px; }
+  .results { margin-top: 8px; display: grid; gap: 4px; }
+  .results button { text-align: left; background: transparent; border: 1px solid transparent; border-radius: 9px; padding: 7px 10px; color: var(--text); font: inherit; cursor: pointer; display: flex; gap: 8px; align-items: baseline; }
+  .results button:hover { background: var(--panel2); border-color: var(--line); }
+  .results button span { color: var(--muted); font-size: 12.5px; flex: 1; }
+  .results button small { color: var(--dim); font-family: "Cascadia Mono", Consolas, monospace; font-size: 11px; }
+  .results .msg { color: var(--muted); font-size: 12.5px; padding: 4px 2px; }
+  .off { opacity: .45; pointer-events: none; }
+
+  .seg { display: inline-flex; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); border-radius: 11px; padding: 3px; }
+  .seg button { background: transparent; border: 0; color: var(--muted); font: inherit; padding: 6px 16px; border-radius: 8px; cursor: pointer; }
+  .seg button.on { background: var(--panel2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+
+  .upd { display: flex; align-items: center; gap: 10px; padding-top: 10px; margin-top: 2px; border-top: 1px solid rgba(255, 190, 160, 0.07); }
+  .upd .st { flex: 1; color: var(--muted); font-size: 13px; }
+  .upd .st b { color: var(--text); font-weight: 600; }
+  .upd .st.new b { color: var(--good); }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  footer { display: flex; align-items: center; gap: 10px; padding: 14px 28px; border-top: 1px solid var(--line); background: rgba(10, 6, 7, 0.45); }
+  footer .hint { flex: 1; color: var(--dim); font-size: 12px; }
+  footer .hint.dirty { color: var(--acc); }
+
+  .preview { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 28px; gap: 14px; }
+  .stagebox { flex: 1; width: 100%; min-height: 0; display: grid; place-items: center; }
+  .monitor { position: relative; border-radius: 16px; padding: 10px; background: linear-gradient(160deg, #2b2124, #140e10); box-shadow: 0 30px 80px rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(255, 220, 200, .07); }
+  .screen { position: relative; overflow: hidden; border-radius: 7px; background: #0c0809; }
+  .screen iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; opacity: 0; transition: opacity .5s; }
+  .screen iframe.show { opacity: 1; }
+  .screen .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 12px; }
+  .cap { color: var(--dim); font-size: 12px; text-align: center; }
+  .cap b { color: var(--muted); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="side">
+    <div class="scroll">
+      <header>
+        <canvas id="clawd" width="16" height="12"></canvas>
+        <div><h1>Lofi Desk</h1><div class="ver" id="ver">настройки</div></div>
+      </header>
+
+      <section>
+        <h2>Сцена</h2>
+        <div class="cards">
+          <button class="card" data-scene="lofi"><div class="ic">🌧</div><b>Лоу-фай комната</b><span>дождь за окном, кот, огни города</span></button>
+          <button class="card" data-scene="art"><div class="ic">🖼</div><b>Своя картинка</b><span>плавный наезд камеры, облака, птицы</span></button>
+        </div>
+        <div class="arts" id="arts" hidden></div>
+      </section>
+
+      <section>
+        <h2>Погода</h2>
+        <div class="row" style="padding-top:0">
+          <div class="lbl">Показывать погоду<small>Open-Meteo, без ключей и регистрации</small></div>
+          <label class="sw"><input type="checkbox" id="weather"><i></i></label>
+        </div>
+        <div id="weatherBox">
+          <div class="place" id="place"></div>
+          <div class="search">
+            <input type="text" id="q" placeholder="Найти город, например Цюрих" spellcheck="false">
+            <button class="btn" id="find">Найти</button>
+          </div>
+          <div class="results" id="results"></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>На экране</h2>
+        <div class="row"><div class="lbl">Лента Claude Code и маскот<small>сессии, вопросы, Клод на полках и в своём домике</small></div><label class="sw"><input type="checkbox" data-key="feed"><i></i></label></div>
+        <div class="row"><div class="lbl">Часы и дата</div><label class="sw"><input type="checkbox" data-key="clock"><i></i></label></div>
+        <div class="row"><div class="lbl">Плёночное зерно</div><label class="sw"><input type="checkbox" data-key="grain"><i></i></label></div>
+        <div class="row"><div class="lbl">Лимиты подписки из приложения Claude<small>читает кэш приложения — неофициально, может сломаться после его обновления</small></div><label class="sw"><input type="checkbox" data-key="limits"><i></i></label></div>
+      </section>
+
+      <section>
+        <h2>Язык</h2>
+        <div class="seg" id="lang"><button data-lang="ru">Русский</button><button data-lang="en">English</button></div>
+      </section>
+
+      <section>
+        <h2>Обновления</h2>
+        <div class="row" style="padding-top:0">
+          <div class="lbl">Проверять раз в день<small>только спрашивает GitHub, вышла ли новая версия — ничего не скачивает</small></div>
+          <label class="sw"><input type="checkbox" data-key="updates"><i></i></label>
+        </div>
+        <div class="upd"><div class="st" id="updSt"></div><button class="btn small" id="updBtn"></button></div>
+      </section>
+
+      <section>
+        <h2>Ещё</h2>
+        <div class="links">
+          <button class="btn small" data-open="screensaver">Заставка Windows…</button>
+          <button class="btn small" data-open="folder">Папка Lofi Desk</button>
+          <button class="btn small" data-open="ini">settings.ini</button>
+          <button class="btn small" data-open="repo">GitHub</button>
+        </div>
+      </section>
+    </div>
+    <footer>
+      <div class="hint" id="hint">изменения применятся после перезапуска обоев</div>
+      <button class="btn" id="cancel">Отмена</button>
+      <button class="btn primary" id="save">Сохранить и перезапустить</button>
+    </footer>
+  </div>
+
+  <div class="preview">
+    <div class="stagebox" id="stagebox">
+      <div class="monitor"><div class="screen" id="screen"><div class="loading">загружаю сцену…</div></div></div>
+    </div>
+    <div class="cap"><b>живой предпросмотр</b> · демо-данные · <span id="dims"></span></div>
+  </div>
+</div>
+
+<script>
+const host = window.chrome && window.chrome.webview;
+const send = m => { if (host) host.postMessage(m); };
+const $ = id => document.getElementById(id);
+
+let S = {}, saved = '', arts = [], hasEn = true, scr = { w: 1440, h: 2560 }, upd = { state: 'idle', latest: '' }, version = '';
+let place = { city: '', lat: '', lon: '' };
+
+// ---------- пиксельный Клод в шапке ----------
+(function () {
+  const g = $('clawd').getContext('2d');
+  g.fillStyle = '#d97757';
+  g.fillRect(2, 1, 12, 7); g.fillRect(0, 4, 2, 2); g.fillRect(14, 4, 2, 2);
+  for (const x of [3, 5, 10, 12]) g.fillRect(x, 8, 1, 3);
+  g.fillStyle = '#1b0f0b'; g.fillRect(4, 3, 1, 2); g.fillRect(11, 3, 1, 2);
+})();
+
+// ---------- состояние ----------
+const on = k => S[k] !== '0';
+function snapshot() { return JSON.stringify(values()); }
+function values() {
+  const v = Object.assign({}, S);
+  v.city = place.city; v.lat = place.lat; v.lon = place.lon;
+  return v;
+}
+function markDirty() {
+  const dirty = snapshot() !== saved;
+  $('hint').textContent = dirty ? 'есть несохранённые изменения' : 'изменения применятся после перезапуска обоев';
+  $('hint').classList.toggle('dirty', dirty);
+}
+
+function render() {
+  document.querySelectorAll('[data-scene]').forEach(b => b.classList.toggle('on', b.dataset.scene === (S.scene === 'art' ? 'art' : 'lofi')));
+  renderArts();
+  document.querySelectorAll('[data-key]').forEach(i => { i.checked = S[i.dataset.key] === '1'; });
+  document.querySelectorAll('[data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === (S.lang === 'ru' ? 'ru' : 'en')));
+  const hasWeather = place.lat !== '' && place.lon !== '';
+  $('weather').checked = hasWeather;
+  $('weatherBox').classList.toggle('off', !hasWeather);
+  $('place').innerHTML = hasWeather ? `📍 <span>${esc(place.city || '—')}</span> <small>${esc(place.lat)}, ${esc(place.lon)}</small>` : '<span style="color:var(--muted)">погода скрыта</span>';
+  renderUpdate();
+  markDirty();
+}
+
+function renderArts() {
+  const box = $('arts');
+  box.hidden = S.scene !== 'art';
+  if (box.hidden) return;
+  const list = arts.slice();
+  if (S.art && !list.includes(S.art)) list.unshift(S.art);
+  box.innerHTML = list.map(p => `<button class="thumb${p === S.art ? ' on' : ''}" data-art="${esc(p)}" title="${esc(p)}"><img src="${esc(encodeURI(p))}" loading="lazy" alt="" onerror="this.remove()"><span class="nm">${esc(p.replace(/^art\//, ''))}</span></button>`).join('')
+    + `<button class="thumb add" id="browse"><div><i>+</i>выбрать файл…</div></button>`;
+}
+
+function renderUpdate() {
+  const st = $('updSt'), btn = $('updBtn');
+  st.className = 'st';
+  if (upd.state === 'available') { st.classList.add('new'); st.innerHTML = `Версия ${esc(version)} · вышла <b>${esc(upd.latest)}</b>`; btn.textContent = 'Открыть релиз'; btn.dataset.do = 'release'; }
+  else if (upd.state === 'checking') { st.innerHTML = `Версия <b>${esc(version)}</b> · проверяю…`; btn.textContent = 'Проверить'; btn.dataset.do = ''; }
+  else if (upd.state === 'latest') { st.innerHTML = `Версия <b>${esc(version)}</b> · это последняя`; btn.textContent = 'Проверить'; btn.dataset.do = 'check'; }
+  else if (upd.state === 'error') { st.innerHTML = `Версия <b>${esc(version)}</b> · GitHub не ответил`; btn.textContent = 'Ещё раз'; btn.dataset.do = 'check'; }
+  else { st.innerHTML = `Версия <b>${esc(version)}</b>`; btn.textContent = 'Проверить сейчас'; btn.dataset.do = 'check'; }
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// ---------- события ----------
+document.addEventListener('click', e => {
+  const t = e.target.closest('button');
+  if (!t) return;
+  if (t.dataset.scene) { S.scene = t.dataset.scene; if (S.scene === 'art' && !S.art && arts.length) S.art = arts[0]; render(); preview(); }
+  else if (t.dataset.art) { S.art = t.dataset.art; render(); preview(); }
+  else if (t.id === 'browse') send({ type: 'browse' });
+  else if (t.dataset.lang) { S.lang = t.dataset.lang; render(); preview(); }
+  else if (t.dataset.open) send({ type: 'open', what: t.dataset.open });
+  else if (t.id === 'updBtn') { if (t.dataset.do === 'release') send({ type: 'open', what: 'release' }); else if (t.dataset.do === 'check') { upd.state = 'checking'; renderUpdate(); send({ type: 'check-update' }); } }
+  else if (t.id === 'find') find();
+  else if (t.dataset.lat) { place = { city: t.dataset.city, lat: t.dataset.lat, lon: t.dataset.lon }; $('results').innerHTML = ''; $('q').value = ''; render(); preview(); }
+  else if (t.id === 'cancel') send({ type: 'cancel' });
+  else if (t.id === 'save') send({ type: 'save', values: values() });
+});
+document.addEventListener('change', e => {
+  const i = e.target;
+  if (i.dataset.key) { S[i.dataset.key] = i.checked ? '1' : '0'; render(); if (i.dataset.key !== 'limits' && i.dataset.key !== 'updates') preview(); }
+  if (i.id === 'weather') {
+    if (i.checked) place = Object.assign({}, lastPlace.lat !== '' ? lastPlace : { city: '', lat: '', lon: '' });
+    else { if (place.lat !== '') lastPlace = place; place = { city: place.city, lat: '', lon: '' }; }
+    if (i.checked && place.lat === '') $('q').focus();
+    render();
+  }
+});
+let lastPlace = { city: '', lat: '', lon: '' };
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') find(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') send({ type: 'cancel' }); });
+
+function find() {
+  const q = $('q').value.trim();
+  if (q.length < 2) return;
+  $('results').innerHTML = '<div class="msg">ищу…</div>';
+  send({ type: 'geo', q });
+  if (!host) setTimeout(() => onGeo({ q, items: [{ name: 'Цюрих', admin: 'Цюрих', country: 'Швейцария', lat: 47.37, lon: 8.55 }] }), 300);
+}
+function onGeo(m) {
+  if (m.q !== $('q').value.trim()) return;
+  if (m.error) { $('results').innerHTML = '<div class="msg">не получилось связаться с сервисом погоды</div>'; return; }
+  if (!m.items.length) { $('results').innerHTML = '<div class="msg">ничего не нашлось</div>'; return; }
+  $('results').innerHTML = m.items.map(r => `<button data-city="${esc(r.name)}" data-lat="${r.lat}" data-lon="${r.lon}">${esc(r.name)} <span>${esc([r.admin, r.country].filter(x => x && x !== r.name).join(', '))}</span><small>${r.lat}, ${r.lon}</small></button>`).join('');
+}
+
+// ---------- живой предпросмотр: настоящая scene.html в демо-режиме ----------
+let pvTimer = 0, pvFrame = null;
+function preview() { clearTimeout(pvTimer); pvTimer = setTimeout(loadPreview, 350); }
+function fit() {
+  const box = $('stagebox').getBoundingClientRect();
+  const k = Math.min((box.width - 20) / scr.w, (box.height - 20) / scr.h);
+  const sc = $('screen');
+  sc.style.width = Math.round(scr.w * k) + 'px'; sc.style.height = Math.round(scr.h * k) + 'px';
+  sc.querySelectorAll('iframe').forEach(f => { f.style.transform = `scale(${k})`; });
+  return k;
+}
+function loadPreview() {
+  const k = fit();
+  const p = new URLSearchParams({
+    mode: 'preview', demo: '1', scene: S.scene === 'art' ? 'art' : 'lofi', art: S.art || '', feed: on('feed') ? '1' : '0',
+    grain: on('grain') ? '1' : '0', clock: on('clock') ? '1' : '0', city: place.city || '',
+    dpr: Math.max(0.3, Math.min(1, Math.round(k * devicePixelRatio * 100) / 100))
+  });
+  const file = S.lang === 'en' && hasEn ? 'scene.en.html' : 'scene.html';
+  const f = document.createElement('iframe');
+  f.style.width = scr.w + 'px'; f.style.height = scr.h + 'px'; f.style.transform = `scale(${k})`;
+  f.setAttribute('tabindex', '-1');
+  f.src = file + '?' + p;
+  f.onload = () => setTimeout(() => {
+    if (pvFrame !== f) return;
+    f.classList.add('show');
+    $('screen').querySelectorAll('iframe').forEach(o => { if (o !== f) setTimeout(() => o.remove(), 500); });
+    const l = $('screen').querySelector('.loading'); if (l) l.remove();
+  }, 450);
+  pvFrame = f;
+  $('screen').appendChild(f);
+}
+addEventListener('resize', () => { fit(); });
+
+// ---------- связь с хостом ----------
+function onInit(m) {
+  S = Object.assign({}, m.settings);
+  arts = m.arts || []; hasEn = m.hasEn !== false; scr = m.screen || scr; upd = m.update || upd; version = m.version || '';
+  place = { city: S.city || '', lat: S.lat || '', lon: S.lon || '' };
+  lastPlace = Object.assign({}, place);
+  delete S.city; delete S.lat; delete S.lon;
+  // переключатели всегда пишем как 1/0; пустое значение в ini значит «по умолчанию»: всё включено, кроме лимитов
+  for (const k of ['feed', 'clock', 'grain', 'updates']) S[k] = S[k] === '0' ? '0' : '1';
+  S.limits = S.limits === '1' ? '1' : '0';
+  S.lang = S.lang === 'ru' ? 'ru' : 'en';
+  S.scene = S.scene === 'art' ? 'art' : 'lofi';
+  $('ver').textContent = 'настройки · версия ' + version;
+  $('dims').textContent = scr.w + ' × ' + scr.h;
+  saved = snapshot();
+  render();
+  loadPreview();
+}
+if (host) {
+  host.addEventListener('message', e => {
+    const m = e.data;
+    if (m.type === 'init') onInit(m);
+    else if (m.type === 'geo') onGeo(m);
+    else if (m.type === 'update') { upd = m; renderUpdate(); }
+    else if (m.type === 'art-added') { arts = m.arts || arts; S.scene = 'art'; S.art = m.path; render(); preview(); }
+  });
+  send({ type: 'ready' });
+} else {
+  // открыто в обычном браузере — показываем с примерными данными
+  onInit({ settings: { lang: 'en', scene: 'lofi', art: 'art/art.jpg', feed: '1', clock: '1', grain: '1', city: 'Лиссабон', lat: '38.72', lon: '-9.14', limits: '0', updates: '1' },
+    arts: ['art/art.jpg'], version: '1.1.0', hasEn: true, screen: { w: 1440, h: 2560 }, update: { state: 'latest', latest: '1.1.0' } });
+}
+</script>
+</body>
+</html>
